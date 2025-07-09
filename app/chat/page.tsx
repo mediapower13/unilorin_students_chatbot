@@ -64,11 +64,16 @@ export default function ChatInterface() {
   ]
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }
 
   useEffect(() => {
-    scrollToBottom()
+    // Scroll to bottom whenever messages change
+    const timer = setTimeout(() => {
+      scrollToBottom()
+    }, 100) // Small delay to ensure DOM is updated
+
+    return () => clearTimeout(timer)
   }, [messages])
 
   // Authentication check
@@ -126,6 +131,11 @@ export default function ChatInterface() {
     setInputMessage("")
     setIsLoading(true)
 
+    // Focus back to input after sending
+    setTimeout(() => {
+      inputRef.current?.focus()
+    }, 100)
+
     // Add a temporary bot message with loading state
     const tempBotMessage: Message = {
       id: `temp_${Date.now()}`,
@@ -137,7 +147,8 @@ export default function ChatInterface() {
     setMessages((prev) => [...prev, tempBotMessage])
 
     try {
-      const response = await fetch("/api/chat", {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://unisup-9n5t.onrender.com"
+      const response = await fetch(`${backendUrl}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -236,6 +247,14 @@ export default function ChatInterface() {
     }
   }
 
+  // Auto-focus input on page load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      inputRef.current?.focus()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [])
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -319,65 +338,44 @@ export default function ChatInterface() {
                 >
                   <LogOut className="w-4 h-4" />
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearChat}
+                  className="text-gray-600 hover:text-red-600 bg-transparent"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+                {retryCount > 0 && (
+                  <Button variant="outline" size="sm" onClick={retryLastMessage} className="text-blue-600 bg-transparent">
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             )}
-
-            <div className="flex items-center gap-2">
-              {user && (
-                <div className="text-right mr-4">
-                  <p className="text-sm font-medium text-gray-900">{user.fullName}</p>
-                  <p className="text-xs text-gray-500">{user.matricNumber}</p>
-                </div>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  localStorage.removeItem('user')
-                  localStorage.removeItem('authToken')
-                  router.push('/login')
-                }}
-                className="text-gray-600 hover:text-red-600 bg-transparent"
-              >
-                Logout
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearChat}
-                className="text-gray-600 hover:text-red-600 bg-transparent"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-              {retryCount > 0 && (
-                <Button variant="outline" size="sm" onClick={retryLastMessage} className="text-blue-600 bg-transparent">
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
           </div>
         </div>
       </div>
 
       {/* Chat Container */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <Card className="h-[calc(100vh-200px)] flex flex-col shadow-xl border-blue-200">
-          <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
+      <div className="max-w-4xl mx-auto px-4 py-6 h-[calc(100vh-120px)] flex flex-col">
+        <Card className="flex-1 flex flex-col shadow-xl border-blue-200 min-h-0">
+          <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg flex-shrink-0">
             <CardTitle className="flex items-center gap-2 text-lg">
               <MessageCircle className="w-5 h-5" />
               Chat with Unilorin Student Support
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="flex-1 flex flex-col p-0">
+          <CardContent className="flex-1 flex flex-col p-0 min-h-0">
             {/* Messages Area */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
+            <ScrollArea className="flex-1 p-4 min-h-0">
+              <div className="space-y-4 pb-4">
                 {messages.map((message) => (
                   <div
                     key={message.id}
                     className={cn(
-                      "flex gap-3 max-w-[85%] group",
+                      "flex gap-3 max-w-[85%] group animate-in slide-in-from-bottom-2 duration-300",
                       message.sender === "user" ? "ml-auto flex-row-reverse" : "mr-auto",
                     )}
                   >
@@ -449,15 +447,16 @@ export default function ChatInterface() {
                     </div>
                   </div>
                 ))}
-                <div ref={messagesEndRef} />
+                {/* Scroll anchor */}
+                <div ref={messagesEndRef} className="h-1" />
               </div>
             </ScrollArea>
 
-            <Separator className="bg-blue-100" />
+            <Separator className="bg-blue-100 flex-shrink-0" />
 
             {/* Quick Actions */}
             {messages.length <= 1 && (
-              <div className="p-4 bg-blue-50 border-b">
+              <div className="p-4 bg-blue-50 border-b flex-shrink-0">
                 <div className="flex items-center gap-2 mb-2">
                   <HelpCircle className="w-4 h-4 text-blue-600" />
                   <span className="text-sm font-medium text-blue-800">Quick Questions:</span>
@@ -480,7 +479,7 @@ export default function ChatInterface() {
             )}
 
             {/* Input Area */}
-            <div className="p-4 bg-gray-50">
+            <div className="p-4 bg-gray-50 flex-shrink-0">
               <div className="flex gap-3 items-end">
                 <div className="flex-1 relative">
                   <Input
@@ -489,7 +488,7 @@ export default function ChatInterface() {
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Ask me about UNILORIN academic procedures, campus resources, or student services..."
-                    className="pr-12 py-3 border-blue-200 focus:border-blue-400 focus:ring-blue-400 rounded-xl"
+                    className="pr-12 py-3 border-blue-200 focus:border-blue-400 focus:ring-blue-400 rounded-xl resize-none"
                     disabled={isLoading || !isOnline}
                     maxLength={500}
                   />
@@ -500,9 +499,13 @@ export default function ChatInterface() {
                 <Button
                   onClick={() => sendMessage()}
                   disabled={!inputMessage.trim() || isLoading || !isOnline}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl disabled:opacity-50"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl disabled:opacity-50 flex-shrink-0"
                 >
-                  <Send className="w-4 h-4" />
+                  {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
 
