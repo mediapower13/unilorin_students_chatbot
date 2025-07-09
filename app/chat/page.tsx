@@ -147,7 +147,7 @@ export default function ChatInterface() {
     setMessages((prev) => [...prev, tempBotMessage])
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://unisup-9n5t.onrender.com"
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://astral-dr7x.onrender.com"
       const response = await fetch(`${backendUrl}/api/chat`, {
         method: "POST",
         headers: {
